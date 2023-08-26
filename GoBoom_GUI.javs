@@ -1,0 +1,163 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+
+public class GoBoom_GUI {
+    private JFrame frame;
+    private JScrollPane playerScreen;
+    private JScrollPane cardScreen;
+    private JPanel cardArea;
+    private JPanel buttonArea;
+    private JPanel playerArea;
+    private JLabel playerText;
+
+    private String resultText;
+
+    public GoBoom_GUI() {
+        frame = new JFrame();
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        frame.setSize(screenSize.width / 2, screenSize.height / 2);
+        frame.setLayout(new BorderLayout());
+        JLabel image = new JLabel(new ImageIcon("goboom.jpg"));
+        
+        resultText = "";
+        playerText = new JLabel();
+        playerArea = new JPanel(new BorderLayout());
+        playerArea.add(playerText, BorderLayout.CENTER);
+        playerArea.add(image,BorderLayout.LINE_END);
+        playerScreen = new JScrollPane(playerArea);
+
+        cardArea = new JPanel();
+        cardScreen = new JScrollPane(cardArea);
+        playerArea.add(cardScreen, BorderLayout.SOUTH);
+        frame.add(playerScreen, BorderLayout.CENTER);
+
+        buttonArea = new JPanel();
+        frame.add(buttonArea, BorderLayout.SOUTH);
+    }
+
+    public void setResultText(String txt) {
+        this.resultText = txt;
+    }
+
+    public void setResultText(GoBoom_GUI gui, String txt) {
+        this.resultText = txt;
+    }
+
+    public void cardAreaAdd(JButton b) {
+        cardArea.add(b);
+    }
+
+    public void cardAreaClear() {
+        cardArea.repaint();
+        cardArea.revalidate();
+        cardArea.removeAll();
+    }
+
+    public void buttonAreaAdd(JButton b) {
+        buttonArea.add(b);
+    }
+
+    public void frameVisible(boolean bool) {
+        frame.setVisible(bool);
+    }
+
+    public void updateplayerText(GoBoom game) {
+        playerText.setText("<html>" + updategameInfo(game) + "<br>" + resultText + "</html>");
+    }
+
+    private String updategameInfo(GoBoom game) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Trick #").append(game.getTrick()).append("<br>");
+        System.out.println("Trick #" + game.getTrick());
+
+        sb.append("Round #").append(game.getRound()).append("<br>");
+        System.out.println("Round #" + game.getRound());
+
+        for (Player player : game.getPlayers()) {
+            sb.append(player.toString()).append("<br>");
+        }
+        for (Player i : game.getPlayers()) {
+            System.out.println(i.toString());
+        }
+
+        sb.append("Center: " + game.getCenter().toString() + "<br>");
+        System.out.println("Center: " + game.getCenter().toString());
+        sb.append("Deck: " + game.getDeck().toString() + "<br>");
+        System.out.println("Deck: " + game.getDeck().toString());
+
+        sb.append("Score: <br>");
+        for (int i = 0; i < game.getPlayers().length; i++) {
+            Player player = game.getPlayers()[i];
+            sb.append("Player").append(player.getId()).append(" = ").append(player.getScore());
+            if (i < game.getPlayers().length - 1) {
+                sb.append(" | ");
+            }
+        }
+
+        System.out.println("Score: ");
+        for (int i = 0; i < game.getPlayers().length; i++) {
+            Player player = game.getPlayers()[i];
+            System.out.print("Player" + player.getId() + " = " + player.getScore());
+            if (i < game.getPlayers().length - 1) {
+                System.out.print(" | ");
+            }
+        }
+
+        sb.append("<br>Turn: Player").append(game.getCurrentPlayer().getId());
+        System.out.println("\nTurn : Player" + game.getCurrentPlayer().getId());
+
+        return sb.toString();
+    }
+
+    public void makeCardButtons(GoBoom game) {
+        for (Card c : game.getCurrentPlayer().getPlayerCards()) {
+            JButton cardButton = new JButton(c.getName());
+
+            cardButton.addActionListener(new ActionListener() {
+
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    game.playerDiscardCard(game, c.getName()); // discard card
+                    System.out.println(">" + c.getName() + "\n");
+
+                    if (game.getCurrentPlayerTurn() == false) {
+                        game.setResultText(game, "");
+
+                        game.setNumOfplayersPlayed(game.getNumOfplayersPlayed() + 1);
+                        game.setCurrentPlayerTurn(true);
+
+                        if (game.getCurrentPlayer().getPlayerCards().size() == 0) { // round ends
+                            System.out.println("*** Player " + game.getCurrentPlayer().getId() + " goes boom!***\n");
+                            game.setResultText("*** Player " + game.getCurrentPlayer().getId() + " goes boom!***");
+                            game.calculatePlayersScore();
+
+                            // new Game and start new round
+                            game.newGame();
+                            game.setRound(game.getRound() + 1);
+                            game.setTrick(1);
+
+                        } else if (game.getNumOfplayersPlayed() == 4) { // all players moved in trick, decide trick
+                                                                        // winner
+                            game.getTrickWinner(game);
+                            game.setTrick(game.getTrick() + 1);
+
+                        } else { // switch to next player and ensure select player not out of bounds
+                            game.switchNextPlayer();
+
+                        }
+                        game.updateplayerText(game);
+                        game.cardAreaClear();
+                        makeCardButtons(game);
+                    }
+                }
+            });
+            game.cardAreaAdd(cardButton);
+        }
+    }
+}
